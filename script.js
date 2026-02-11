@@ -14,6 +14,10 @@ const bacMgPerLiter = document.getElementById('bacMgPerLiter');
 const timeToZero = document.getElementById('timeToZero');
 const fineAmount = document.getElementById('fineAmount');
 const licensePoints = document.getElementById('licensePoints');
+const statusCard = document.getElementById('statusCard');
+const statusIcon = document.getElementById('statusIcon');
+const statusValue = document.getElementById('statusValue');
+const endTimeInput = document.getElementById('endTime');
 
 // Elements cho form
 const drinkAmountInput = document.getElementById('drinkAmount');
@@ -73,12 +77,116 @@ function initDefaultDrinkInfo() {
     }
 }
 
+// Hàm format thời gian thành dd/mm/yyyy hh:mm AM/PM cho input
+function formatDateTimeForInput(date) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    
+    // Chuyển đổi sang định dạng 12 giờ với AM/PM
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // Nếu là 0 thì chuyển thành 12
+    const formattedHours = String(hours).padStart(2, '0');
+    
+    return `${day}/${month}/${year} ${formattedHours}:${minutes} ${ampm}`;
+}
+
+// Hàm parse thời gian từ dd/mm/yyyy hh:mm AM/PM
+function parseDateTimeInput(dateString) {
+    if (!dateString) return null;
+    
+    // Format: dd/mm/yyyy hh:mm AM/PM
+    const match = dateString.match(/(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}) (AM|PM)/);
+    if (!match) return null;
+    
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1; // Month is 0-indexed
+    const year = parseInt(match[3], 10);
+    let hours = parseInt(match[4], 10);
+    const minutes = parseInt(match[5], 10);
+    const ampm = match[6];
+    
+    // Chuyển đổi sang 24h format
+    if (ampm === 'PM' && hours !== 12) {
+        hours += 12;
+    } else if (ampm === 'AM' && hours === 12) {
+        hours = 0;
+    }
+    
+    return new Date(year, month, day, hours, minutes);
+}
+
+// Hàm set giá trị mặc định cho thời gian kết thúc uống (ngày hiện tại trừ 1 ngày)
+function setDefaultEndTime() {
+    if (endTimeInput) {
+        const now = new Date();
+        // Trừ 1 ngày
+        now.setDate(now.getDate() - 1);
+        
+        // Format thành dd/mm/yyyy hh:mm AM/PM
+        endTimeInput.value = formatDateTimeForInput(now);
+    }
+}
+
+// Thêm input mask cho thời gian để tự động format
+if (endTimeInput) {
+    endTimeInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, ''); // Chỉ lấy số
+        
+        if (value.length > 0) {
+            // Format: dd/mm/yyyy hh:mm AM/PM
+            let formatted = '';
+            
+            // Ngày (2 chữ số)
+            if (value.length > 0) formatted += value.substring(0, 2);
+            if (value.length > 2) formatted += '/' + value.substring(2, 4);
+            if (value.length > 4) formatted += '/' + value.substring(4, 8);
+            if (value.length > 8) formatted += ' ' + value.substring(8, 10);
+            if (value.length > 10) formatted += ':' + value.substring(10, 12);
+            if (value.length > 12) {
+                const hour = parseInt(value.substring(8, 10), 10);
+                if (hour >= 12) {
+                    formatted += ' PM';
+                } else {
+                    formatted += ' AM';
+                }
+            }
+            
+            e.target.value = formatted;
+        }
+    });
+    
+    // Validate format khi blur
+    endTimeInput.addEventListener('blur', function(e) {
+        const value = e.target.value;
+        if (value && !value.match(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2} (AM|PM)$/)) {
+            // Nếu không đúng format, thử parse và format lại
+            const parsed = parseDateTimeInput(value);
+            if (parsed) {
+                e.target.value = formatDateTimeForInput(parsed);
+            } else {
+                // Nếu không parse được, clear hoặc giữ nguyên để user sửa
+                e.target.style.borderColor = '#e74c3c';
+            }
+        } else {
+            e.target.style.borderColor = '';
+        }
+    });
+}
+
 // Chạy ngay khi script load và khi DOM ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDefaultDrinkInfo);
+    document.addEventListener('DOMContentLoaded', function() {
+        initDefaultDrinkInfo();
+        setDefaultEndTime();
+    });
 } else {
     // DOM đã sẵn sàng
     initDefaultDrinkInfo();
+    setDefaultEndTime();
 }
 
 // Hàm tính nồng độ cồn trong máu (BAC - Blood Alcohol Content)
@@ -104,7 +212,7 @@ function calculateTotalAlcohol(drinkType, amount) {
     return totalAlcohol;
 }
 
-function calculateBAC(gender, weightKg, drinkType, amount) {
+function calculateBAC(gender, weightKg, drinkType, amount, hoursElapsed = 0) {
     // Tính tổng lượng cồn (gram)
     const totalAlcohol = calculateTotalAlcohol(drinkType, amount);
     
@@ -116,14 +224,19 @@ function calculateBAC(gender, weightKg, drinkType, amount) {
     // Chuyển cân nặng từ kg sang pound (1 kg = 2.20462 pound)
     const weightPounds = weightKg * 2.20462;
     
-    // Tính BAC (giả sử uống ngay trước đó)
+    // Tính BAC ban đầu (tại thời điểm uống xong)
     // Công thức Widmark: BAC = (A × 5.14) / (W × r)
-    const bac = (totalAlcohol * 5.14) / (weightPounds * r);
+    const initialBAC = (totalAlcohol * 5.14) / (weightPounds * r);
     
-    return Math.max(0, bac); // Đảm bảo không âm
+    // Tính BAC sau thời gian đã trôi qua
+    // Tốc độ đào thải: 0.15 g/L mỗi giờ
+    const eliminationRate = 0.15; // g/L per hour
+    const bac = Math.max(0, initialBAC - (eliminationRate * hoursElapsed));
+    
+    return bac;
 }
 
-// Hàm tính thời gian hết cồn (giờ)
+// Hàm tính thời gian hết cồn (giờ) từ BAC hiện tại
 // Tốc độ đào thải cồn trung bình: 0.15 g/L/giờ (hoặc 15 mg/100ml/giờ)
 // Công thức: Thời gian = BAC / Tốc độ đào thải
 function calculateTimeToZero(bacGPerLiter) {
@@ -134,6 +247,38 @@ function calculateTimeToZero(bacGPerLiter) {
     const timeHours = bacGPerLiter / eliminationRate;
     
     return Math.max(0, timeHours);
+}
+
+// Hàm tính số giờ đã trôi qua từ thời điểm kết thúc uống đến hiện tại
+function calculateHoursElapsed(endTimeString) {
+    if (!endTimeString) return 0;
+    
+    const endTime = parseDateTimeInput(endTimeString);
+    if (!endTime) return 0;
+    
+    const now = new Date();
+    const diffMs = now - endTime;
+    const diffHours = diffMs / (1000 * 60 * 60);
+    
+    return Math.max(0, diffHours);
+}
+
+// Hàm hiển thị trạng thái hiện tại
+function displayCurrentStatus(bacMgPer100mlCurrent, hoursElapsed) {
+    if (bacMgPer100mlCurrent <= 0) {
+        statusIcon.textContent = '✅';
+        statusCard.style.borderLeftColor = '#50c878';
+        if (hoursElapsed > 0) {
+            statusValue.textContent = `Đã hết cồn (sau ${formatNumber(hoursElapsed)} giờ)`;
+        } else {
+            statusValue.textContent = 'Chưa uống rượu bia';
+        }
+    } else {
+        statusIcon.textContent = '⚠️';
+        statusCard.style.borderLeftColor = '#ff6b35';
+        const remainingHours = calculateTimeToZero(bacMgPer100mlCurrent / 100);
+        statusValue.textContent = `Còn cồn: ${formatNumber(bacMgPer100mlCurrent)} mg/100ml (còn ${formatNumber(remainingHours)} giờ nữa)`;
+    }
 }
 
 // Hàm tính mức phạt dựa trên BAC và phương tiện
@@ -220,8 +365,22 @@ function formatNumber(num) {
     return num.toFixed(1).replace('.', ',');
 }
 
+// Hàm format thời gian theo định dạng dd/mm/yyyy hh:mm AM/PM (cho hiển thị)
+function formatDateTime(dateString) {
+    if (!dateString) return '';
+    
+    // Nếu đã là định dạng dd/mm/yyyy hh:mm AM/PM thì trả về luôn
+    if (dateString.match(/\d{2}\/\d{2}\/\d{4} \d{2}:\d{2} (AM|PM)/)) {
+        return dateString;
+    }
+    
+    // Nếu là Date object hoặc ISO string thì parse và format
+    const date = dateString instanceof Date ? dateString : parseDateTimeInput(dateString) || new Date(dateString);
+    return formatDateTimeForInput(date);
+}
+
 // Hàm hiển thị thông tin đầu vào
-function displayInputSummary(gender, weight, drinkType, amount, vehicle) {
+function displayInputSummary(gender, weight, drinkType, amount, vehicle, endTimeString) {
     summaryGender.textContent = gender === 'male' ? 'Nam' : 'Nữ';
     summaryWeight.textContent = `${formatNumber(weight)} kg`;
     
@@ -229,6 +388,9 @@ function displayInputSummary(gender, weight, drinkType, amount, vehicle) {
     if (drinkTypes[drinkType]) {
         const drink = drinkTypes[drinkType];
         summaryDrink.textContent = `${formatNumber(amount)} ${drink.unitName}`;
+        if (endTimeString) {
+            summaryDrink.textContent += ` (${formatDateTime(endTimeString)})`;
+        }
     } else {
         summaryDrink.textContent = '-';
     }
@@ -251,6 +413,7 @@ form.addEventListener('submit', function(e) {
     const drinkType = document.querySelector('input[name="drinkType"]:checked')?.value;
     const amount = parseFloat(document.getElementById('drinkAmount').value);
     const vehicle = document.querySelector('input[name="vehicle"]:checked')?.value;
+    const endTimeString = endTimeInput.value;
     
     // Kiểm tra validation
     if (!gender || !weight || !drinkType || isNaN(amount) || amount <= 0 || !vehicle) {
@@ -258,33 +421,44 @@ form.addEventListener('submit', function(e) {
         return;
     }
     
-    // Tính toán BAC (g/L)
-    const bacGPerLiter = calculateBAC(gender, weight, drinkType, amount);
+    // Tính số giờ đã trôi qua từ khi kết thúc uống
+    const hoursElapsed = calculateHoursElapsed(endTimeString);
+    
+    // Tính toán BAC ban đầu (tại thời điểm uống xong)
+    const initialBAC = calculateBAC(gender, weight, drinkType, amount, 0);
+    
+    // Tính toán BAC hiện tại (tại thời điểm hiện tại)
+    const currentBAC = calculateBAC(gender, weight, drinkType, amount, hoursElapsed);
     
     // Chuyển đổi sang mg/100ml máu
-    // 1 g/L = 1000 mg/L = 100 mg/100ml
-    const bacMgPer100mlValue = bacGPerLiter * 100;
+    const initialBACMgPer100ml = initialBAC * 100;
+    const currentBACMgPer100ml = currentBAC * 100;
     
     // Chuyển đổi sang mg/lít khí thở
-    // Tỷ lệ máu:khí thở khoảng 2100:1
-    // 1 g/L máu ≈ 0.476 mg/L khí thở (1/2100 * 1000)
-    const bacMgPerLiterBreath = bacGPerLiter * 0.476;
+    const currentBACMgPerLiterBreath = currentBAC * 0.476;
     
-    // Tính thời gian hết cồn
-    const timeHours = calculateTimeToZero(bacGPerLiter);
+    // Tính thời gian còn lại để hết cồn (từ thời điểm hiện tại)
+    const remainingHours = calculateTimeToZero(currentBAC);
     
-    // Tính mức phạt
-    const penalty = calculatePenalty(bacMgPer100mlValue, vehicle);
+    // Tính mức phạt dựa trên BAC hiện tại
+    const penalty = calculatePenalty(currentBACMgPer100ml, vehicle);
     
     // Hiển thị thông tin đầu vào
-    displayInputSummary(gender, weight, drinkType, amount, vehicle);
+    displayInputSummary(gender, weight, drinkType, amount, vehicle, endTimeString);
     
-    // Hiển thị kết quả BAC
-    bacMgPer100ml.textContent = formatNumber(bacMgPer100mlValue);
-    bacMgPerLiter.textContent = formatNumber(bacMgPerLiterBreath);
+    // Hiển thị kết quả BAC hiện tại
+    bacMgPer100ml.textContent = formatNumber(currentBACMgPer100ml);
+    bacMgPerLiter.textContent = formatNumber(currentBACMgPerLiterBreath);
     
-    // Hiển thị thời gian hết cồn
-    timeToZero.textContent = `${formatNumber(timeHours)} giờ`;
+    // Hiển thị trạng thái hiện tại
+    displayCurrentStatus(currentBACMgPer100ml, hoursElapsed);
+    
+    // Hiển thị thời gian còn lại để hết cồn
+    if (currentBACMgPer100ml > 0) {
+        timeToZero.textContent = `${formatNumber(remainingHours)} giờ`;
+    } else {
+        timeToZero.textContent = 'Đã hết cồn';
+    }
     
     // Hiển thị mức phạt
     fineAmount.textContent = penalty.fine;

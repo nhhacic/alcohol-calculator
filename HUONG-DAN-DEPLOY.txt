@@ -1,0 +1,75 @@
+═══════════════════════════════════════════════════════════
+  HƯỚNG DẪN DEPLOY WEBAPP LÊN GITHUB PAGES
+═══════════════════════════════════════════════════════════
+
+BƯỚC 1: XÓA FILE LOCK (Nếu có lỗi)
+───────────────────────────────────────────────────────────
+Mở PowerShell trong folder d:\alcohol-calculator và chạy:
+
+    Remove-Item -Path ".git\index.lock" -Force
+
+
+BƯỚC 2: TẠO REPOSITORY TRÊN GITHUB
+───────────────────────────────────────────────────────────
+1. Vào: https://github.com/new
+2. Repository name: alcohol-calculator
+3. Chọn: Public
+4. KHÔNG tích "Initialize with README"
+5. Click "Create repository"
+
+
+BƯỚC 3: COMMIT VÀ PUSH CODE
+───────────────────────────────────────────────────────────
+Mở PowerShell trong folder d:\alcohol-calculator và chạy:
+
+    # Xóa lock file
+    Remove-Item -Path ".git\index.lock" -Force -ErrorAction SilentlyContinue
+
+    # Cập nhật remote (THAY YOUR_USERNAME bằng username GitHub của bạn)
+    git remote set-url origin https://github.com/YOUR_USERNAME/alcohol-calculator.git
+
+    # Add files
+    git add .
+
+    # Commit
+    git commit -m "Deploy alcohol calculator webapp"
+
+    # Push lên GitHub
+    git push -u origin main
+
+LƯU Ý: Nếu được hỏi đăng nhập, dùng Personal Access Token thay vì password
+Tạo token tại: https://github.com/settings/tokens
+
+
+BƯỚC 4: BẬT GITHUB PAGES
+───────────────────────────────────────────────────────────
+1. Vào repository trên GitHub
+2. Click tab "Settings"
+3. Scroll xuống phần "Pages" (sidebar bên trái)
+4. Source: Chọn "Deploy from a branch"
+5. Branch: Chọn "main"
+6. Folder: Chọn "/ (root)"
+7. Click "Save"
+
+
+BƯỚC 5: TRUY CẬP WEBAPP
+───────────────────────────────────────────────────────────
+Sau 1-2 phút, webapp sẽ có tại:
+
+    https://YOUR_USERNAME.github.io/alcohol-calculator/
+
+(Thay YOUR_USERNAME bằng username GitHub của bạn)
+
+
+═══════════════════════════════════════════════════════════
+  CÁCH KHÁC: SỬ DỤNG GITHUB DESKTOP (DỄ HƠN)
+═══════════════════════════════════════════════════════════
+
+1. Tải GitHub Desktop: https://desktop.github.com/
+2. Mở GitHub Desktop
+3. File > Add Local Repository > Chọn folder d:\alcohol-calculator
+4. Commit changes
+5. Publish repository lên GitHub
+6. Sau đó vào Settings > Pages trên GitHub để bật Pages
+
+═══════════════════════════════════════════════════════════
