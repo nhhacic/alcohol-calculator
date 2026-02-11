@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Ứng dụng tính toán nồng độ cồn và thời gian hết cồn trong máu">
+    <meta name="theme-color" content="#4a90e2">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Tính Cồn">
+    <title>Máy Tính Nồng Độ Cồn</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Tính nồng độ cồn</h1>
+        </header>
+
+        <main>
+            <form id="alcoholForm" class="form">
+                <div class="form-group">
+                    <label for="gender">Giới tính</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="gender" value="male" id="gender-male" checked required>
+                            <span class="radio-content">
+                                <span class="radio-icon">👨</span>
+                                <span class="radio-text">Nam</span>
+                            </span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="gender" value="female" id="gender-female" required>
+                            <span class="radio-content">
+                                <span class="radio-icon">👩</span>
+                                <span class="radio-text">Nữ</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="weight">Cân nặng (kg)</label>
+                    <input type="number" id="weight" name="weight" min="1" max="300" step="0.1" value="70" placeholder="Nhập cân nặng" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Loại đồ uống</label>
+                    <div class="button-group" id="drinkTypeGroup">
+                        <label class="option-button">
+                            <input type="radio" name="drinkType" value="beer" id="drink-beer" checked required>
+                            <span class="button-content">
+                                <span class="button-icon">🍺</span>
+                                <span class="button-text">Bia</span>
+                            </span>
+                        </label>
+                        <label class="option-button">
+                            <input type="radio" name="drinkType" value="strong" id="drink-strong" required>
+                            <span class="button-content">
+                                <span class="button-icon">🍾</span>
+                                <span class="button-text">Rượu mạnh</span>
+                            </span>
+                        </label>
+                        <label class="option-button">
+                            <input type="radio" name="drinkType" value="wine" id="drink-wine" required>
+                            <span class="button-content">
+                                <span class="button-icon">🍷</span>
+                                <span class="button-text">Rượu vang</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="drinkAmount">Số lượng đã uống</label>
+                    <div class="input-with-unit">
+                        <input type="number" id="drinkAmount" name="drinkAmount" min="0" step="0.5" placeholder="Nhập số lượng" required>
+                        <span class="input-unit" id="inputUnit">-</span>
+                    </div>
+                    <span class="unit-hint" id="unitHint"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>Phương tiện</label>
+                    <div class="button-group" id="vehicleGroup">
+                        <label class="option-button">
+                            <input type="radio" name="vehicle" value="car" id="vehicle-car" checked required>
+                            <span class="button-content">
+                                <span class="button-icon">🚗</span>
+                                <span class="button-text">Ôtô</span>
+                            </span>
+                        </label>
+                        <label class="option-button">
+                            <input type="radio" name="vehicle" value="motorcycle" id="vehicle-motorcycle" required>
+                            <span class="button-content">
+                                <span class="button-icon">🛵</span>
+                                <span class="button-text">Xe máy</span>
+                            </span>
+                        </label>
+                        <label class="option-button">
+                            <input type="radio" name="vehicle" value="bicycle" id="vehicle-bicycle" required>
+                            <span class="button-content">
+                                <span class="button-icon">🚲</span>
+                                <span class="button-text">Xe thô sơ</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit">Xem kết quả</button>
+            </form>
+
+            <div id="result" class="result hidden">
+                <div class="input-summary">
+                    <div class="summary-title">
+                        <h2>Thông tin đầu vào</h2>
+                        <button type="button" class="btn-change" id="btnChangeInfo">Thay đổi thông tin</button>
+                    </div>
+                    <div class="summary-content">
+                        <div class="summary-item">
+                            <span class="summary-label">Giới tính:</span>
+                            <span class="summary-value" id="summaryGender">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Cân nặng:</span>
+                            <span class="summary-value" id="summaryWeight">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Đã uống:</span>
+                            <span class="summary-value" id="summaryDrink">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Phương tiện:</span>
+                            <span class="summary-value" id="summaryVehicle">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-section">
+                    <h2>Kết quả</h2>
+                    <div class="bac-result">
+                        <p class="bac-text">
+                            Nồng độ cồn: <strong id="bacMgPer100ml">0,0</strong> mg/100 ml máu, 
+                            tương đương <strong id="bacMgPerLiter">0,000</strong> mg/ lít khí thở
+                        </p>
+                    </div>
+                    <div class="time-card">
+                        <div class="time-icon">⏰</div>
+                        <div class="time-content">
+                            <div class="time-label">Thời gian hết cồn</div>
+                            <div class="time-value" id="timeToZero">0,0 giờ</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="penalty-section">
+                    <h2>Mức phạt tương ứng</h2>
+                    <div class="penalty-cards">
+                        <div class="penalty-card">
+                            <div class="penalty-icon">💰</div>
+                            <div class="penalty-label">Phạt tiền</div>
+                            <div class="penalty-value" id="fineAmount">-</div>
+                        </div>
+                        <div class="penalty-card">
+                            <div class="penalty-icon">🪪</div>
+                            <div class="penalty-label">GPLX</div>
+                            <div class="penalty-value" id="licensePoints">-</div>
+                        </div>
+                    </div>
+                    <p class="penalty-disclaimer">Thông tin có tính tham khảo. Theo Nghị định 168/2024/NĐ-CP</p>
+                </div>
+
+                <button type="button" class="btn-retry" id="btnRetry">Thử lại</button>
+            </div>
+        </main>
+
+        <footer>
+            <p class="disclaimer">⚠️ Thông tin chỉ mang tính chất tham khảo. Không lái xe sau khi uống rượu bia!</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Đăng ký Service Worker cho PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
